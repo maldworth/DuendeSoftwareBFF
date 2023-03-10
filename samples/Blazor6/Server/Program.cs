@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
@@ -42,10 +43,12 @@ try
         })
         .AddOpenIdConnect("oidc", options =>
         {
-            options.Authority = "https://localhost:5001";
-    
+            options.Authority = "https://demo.duendesoftware.com";
+            //options.Authority = "https://localhost:5001";
+
             // confidential client using code flow + PKCE
-            options.ClientId = "spa";
+            options.ClientId = "interactive.confidential";
+            //options.ClientId = "spa";
             options.ClientSecret = "secret";
             options.ResponseType = "code";
             options.ResponseMode = "query";
@@ -89,7 +92,17 @@ try
     app.MapControllers()
         .RequireAuthorization()
         .AsBffApiEndpoint();
-    
+
+    app.Use(async (context, next) =>
+    {
+        if (context.Request.Path == "/" && context.User.Identity?.IsAuthenticated != true)
+        {
+            await context.ChallengeAsync();
+            return;
+        }
+        await next();
+    });
+
     app.MapFallbackToFile("index.html");
     
     app.Run();
